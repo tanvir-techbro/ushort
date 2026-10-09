@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -8,8 +9,17 @@ import (
 
 func startServer() error {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Hello")
+	mux.Handle("/", http.FileServer(http.Dir("Page")))
+	mux.HandleFunc("POST /shorten", func(w http.ResponseWriter, r *http.Request) {
+		var v struct {
+			URL string `json:"url"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
+			http.Error(w, "bad json", http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{"url": v.URL})
 	})
 
 	fmt.Println("Listening on :8080")
